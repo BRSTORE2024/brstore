@@ -87,15 +87,14 @@ const startSock = async () => {
 	sock.ev.on('messages.upsert', async ({ messages, type }) => {
 		if (type !== 'notify') return
 		const msg = messages[0]
-		console.log(msg)
-		if (!msg.message) return
+		if (!msg.message || msg.key.fromMe) return
 
 		const sender = msg.key.remoteJid
 		const text = (msg.message?.conversation ||
 			msg.message?.extendedTextMessage?.text ||
 			'').trim()
 
-		const prefix = '#sortpw'
+		const prefix = '!sortpw'
 
 		// ⏳ Cek apakah user sedang dalam sesi password
 		if (pendingPwInput.has(sender)) {
