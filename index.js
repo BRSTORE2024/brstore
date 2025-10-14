@@ -92,6 +92,7 @@ const startSock = async () => {
 		const sender = msg.key.remoteJid
 		const text = (msg.message?.conversation ||
 			msg.message?.extendedTextMessage?.text ||
+			msg.message?.imageMessage?.caption || // dukung caption juga
 			'').trim()
 
 		const prefix = '!sortpw'
@@ -117,13 +118,20 @@ const startSock = async () => {
 			return
 		}
 
-			// 🟡 Trigger awal: !sortpw + daftar email
+		// 🟡 Trigger awal: !sortpw + daftar email campur teks
 		if (text.toLowerCase().startsWith(prefix)) {
-			const rawEmails = text.slice(prefix.length).trim().split('\n').map(e => e.trim())
-			const regex = /^[\w.%+-]+@gmail\.com$/i
-			const filtered = rawEmails.filter(e => regex.test(e))
+			const body = text.slice(prefix.length).trim()
 
-			if (filtered.length === 0) {
+			// Ekstrak semua @gmail.com dari teks
+			const extractEmails = (text) => {
+				const regex = /\b[A-Za-z0-9._%+-]+@gmail\.com\b/g
+				const found = text.match(regex) || []
+				return [...new Set(found)] // hapus duplikat
+			}
+
+			const emailList = extractEmails(body)
+
+			if (emailList.length === 0) {
 				await sock.sendMessage(sender, {
 					text: '❌ Tidak ditemukan email Gmail yang valid.'
 				}, { quoted: msg })
@@ -131,10 +139,10 @@ const startSock = async () => {
 			}
 
 			// Simpan ke map dan minta password
-			pendingPwInput.set(sender, filtered)
+			pendingPwInput.set(sender, emailList)
 
 			await sock.sendMessage(sender, {
-				text: `📨 ${filtered.length} email ditemukan:\n${filtered.map((e, i) => `${i + 1}. ${e}`).join('\n')}\n\nSilakan kirim *1 password* untuk semua email di atas.`
+				text: `📨 ${emailList.length} email ditemukan:\n${emailList.map((e, i) => `${i + 1}. ${e}`).join('\n')}\n\nSilakan kirim *1 password* untuk semua email di atas.`
 			}, { quoted: msg })
 
 			return
