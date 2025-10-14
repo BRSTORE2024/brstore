@@ -112,7 +112,7 @@ const startSock = async () => {
 				.join('\n')
 
 			await sock.sendMessage(sender, {
-				text: `✅ Berikut hasil sortir:\n${result}`
+				text: `${result}`
 			}, { quoted: msg })
 
 			return
@@ -124,7 +124,7 @@ const startSock = async () => {
 
 			// Ekstrak semua @gmail.com dari teks
 			const extractEmails = (text) => {
-				const regex = /\b[A-Za-z0-9._%+-]+@gmail\.com\b/g
+				const regex = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g
 				const found = text.match(regex) || []
 				return [...new Set(found)] // hapus duplikat
 			}
