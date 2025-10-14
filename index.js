@@ -100,7 +100,7 @@ const startSock = async () => {
 			msg.message?.extendedTextMessage?.text ||
 			'').trim()
 
-		const prefix = '!sortpw'
+		const prefix = '#sortpw'
 
 		// ⏳ Cek apakah user sedang dalam sesi password
 		if (pendingPwInput.has(sender)) {
