@@ -82,6 +82,65 @@ const startSock = async () => {
 		}
 	})
 	
+	const pendingPwInput = new Map() // <sender, emailList[]>
+
+	sock.ev.on('messages.upsert', async ({ messages, type }) => {
+		if (type !== 'notify') return
+		const msg = messages[0]
+		if (!msg.message || msg.key.fromMe) return
+
+		const sender = msg.key.remoteJid
+		const text = (msg.message?.conversation ||
+			msg.message?.extendedTextMessage?.text ||
+			'').trim()
+
+		const prefix = '!sortpw'
+
+		// ⏳ Cek apakah user sedang dalam sesi password
+		if (pendingPwInput.has(sender)) {
+			const emailList = pendingPwInput.get(sender)
+			const password = text.trim()
+
+			// Hapus sesi
+			pendingPwInput.delete(sender)
+
+			// Gabungkan email + pw
+			const result = emailList
+				.sort((a, b) => a.localeCompare(b))
+				.map((email, i) => `${i + 1}. ${email} | ${password}`)
+				.join('\n')
+
+			await sock.sendMessage(sender, {
+				text: `✅ Berikut hasil sortir:\n${result}`
+			}, { quoted: msg })
+
+			return
+		}
+
+			// 🟡 Trigger awal: !sortpw + daftar email
+		if (text.toLowerCase().startsWith(prefix)) {
+			const rawEmails = text.slice(prefix.length).trim().split('\n').map(e => e.trim())
+			const regex = /^[\w.%+-]+@gmail\.com$/i
+			const filtered = rawEmails.filter(e => regex.test(e))
+
+			if (filtered.length === 0) {
+				await sock.sendMessage(sender, {
+					text: '❌ Tidak ditemukan email Gmail yang valid.'
+				}, { quoted: msg })
+				return
+			}
+
+			// Simpan ke map dan minta password
+			pendingPwInput.set(sender, filtered)
+
+			await sock.sendMessage(sender, {
+				text: `📨 ${filtered.length} email ditemukan:\n${filtered.map((e, i) => `${i + 1}. ${e}`).join('\n')}\n\nSilakan kirim *1 password* untuk semua email di atas.`
+			}, { quoted: msg })
+
+			return
+		}
+	})
+	
 }
 
 setTimeout(() => startSock(), 3000)
