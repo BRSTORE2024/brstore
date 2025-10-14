@@ -88,7 +88,7 @@ const startSock = async () => {
 		if (type !== 'notify') return
 		const msg = messages[0]
 		console.log(msg)
-		if (!msg.message || msg.key.fromMe) return
+		if (!msg.message) return
 
 		const sender = msg.key.remoteJid
 		const text = (msg.message?.conversation ||
