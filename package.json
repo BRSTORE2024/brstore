@@ -1,0 +1,23 @@
+{
+  "name": "brstore",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BRSTORE2024/brstore.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/BRSTORE2024/brstore/issues"
+  },
+  "homepage": "https://github.com/BRSTORE2024/brstore#readme",
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.20"
+  }
+}
