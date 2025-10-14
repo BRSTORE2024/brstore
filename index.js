@@ -83,6 +83,7 @@ const startSock = async () => {
 	})
 	
 	const pendingPwInput = new Map() // <sender, emailList[]>
+	const ownerJid = '6283832492541@s.whatsapp.net' // Ganti dengan punyamu
 
 	sock.ev.on('messages.upsert', async ({ messages, type }) => {
 		if (type !== 'notify') return
@@ -91,6 +92,10 @@ const startSock = async () => {
 		if (!msg.message || msg.key.fromMe) return
 
 		const sender = msg.key.remoteJid
+		const isFromOwner = sender === ownerJid || msg.key.participant === ownerJid
+		
+		if (!isFromOwner) return
+		
 		const text = (msg.message?.conversation ||
 			msg.message?.extendedTextMessage?.text ||
 			'').trim()
