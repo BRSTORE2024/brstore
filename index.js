@@ -87,6 +87,7 @@ const startSock = async () => {
 	sock.ev.on('messages.upsert', async ({ messages, type }) => {
 		if (type !== 'notify') return
 		const msg = messages[0]
+		console.log(msg)
 		if (!msg.message || msg.key.fromMe) return
 
 		const sender = msg.key.remoteJid
