@@ -82,13 +82,6 @@ const startSock = async () => {
 		}
 	})
 	
-	sock.ev.on('groups.update', async (update) => {
-		console.log(chalk.cyanBright(`Grup diupdate: ${JSON.stringify(update)}`))
-	})
-
-	sock.ev.on('contacts.update', (update) => {
-		console.log(chalk.blueBright(`Kontak diupdate: ${JSON.stringify(update)}`))
-	})
 }
 
 setTimeout(() => startSock(), 3000)
