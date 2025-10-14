@@ -108,7 +108,7 @@ const startSock = async () => {
 			// Gabungkan email + pw
 			const result = emailList
 				.sort((a, b) => a.localeCompare(b))
-				.map((email, i) => `${email} | ${password}`)
+				.map((email) => `${email} | ${password}`)
 				.join('\n')
 
 			await sock.sendMessage(sender, {
