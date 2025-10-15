@@ -106,7 +106,7 @@ const startSock = async () => {
 		}
 	})
 	
-	scheduleJob(sock)
+	//scheduleJob(sock)
 
 	const pendingPwInput = new Map()
 
