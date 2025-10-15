@@ -258,29 +258,49 @@ const startSock = async () => {
 		}
 	})
 
-	// Scheduler kirim pesan otomatis setiap menit
+	// Fungsi bantu parse waktu flexible
+	function parseTime(t) {
+		const parts = t.split(':')
+		let hh = parts[0].padStart(2, '0')
+		let mm = parts[1] ? parts[1].padStart(2, '0') : '00'
+
+		const hNum = Number(hh)
+		const mNum = Number(mm)
+
+		if (isNaN(hNum) || isNaN(mNum)) return null
+		if (hNum < 0 || hNum > 23) return null
+		if (mNum < 0 || mNum > 59) return null
+
+		return `${hh}:${mm}`
+	}
+
+	// Scheduler cek setiap menit
 	setInterval(async () => {
 		if (!sock || !sock.user) return
 
 		const now = new Date()
-		const currentTime = now.toTimeString().slice(0, 5)
-		const today = now.toISOString().split('T')[0]
+		// Ambil jam dan menit sekarang dengan format HH:MM
+		const currentTime = now.toTimeString().slice(0, 5) 
 
 		for (const jid in schedule) {
-			for (const task of schedule[jid]) {
-				if (task.time === currentTime && task.lastSent !== today) {
+			for (const item of schedule[jid]) {
+			// Jika waktu sekarang sama dengan waktu jadwal
+				if (item.time === currentTime) {
+				// Cek supaya tidak kirim duplikat dalam menit yang sama
+					if (item.lastSent === currentTime) continue
+
 					try {
-						await sock.sendMessage(jid, { text: task.message })
-						task.lastSent = today
+						await sock.sendMessage(jid, { text: item.message })
+						item.lastSent = currentTime
 						saveSchedule()
-						console.log(chalk.greenBright(`📤 Pesan terjadwal dikirim ke ${jid} pada ${task.time}`))
+						console.log(`Pesan terkirim ke ${jid} pada ${currentTime}`)
 					} catch (e) {
-						console.error(chalk.redBright(`Gagal kirim ke ${jid}: ${e.message}`))
+						console.error(`Gagal kirim pesan ke ${jid} pada ${currentTime}:`, e.message)
 					}
 				}
 			}
 		}
-	}, 60 * 1000) // cek tiap menit
+	}, 60 * 1000) // cek tiap 60 detik (1 menit)
 }
 
 setTimeout(() => startSock(), 3000)
