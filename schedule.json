@@ -1,0 +1,47 @@
+{
+  "groupA": {
+    "jid": "120363120454785917@g.us",
+    "messages": [
+      {
+        "message": "*YouTube Premium*\n- 30Days: Rp 3.500\n- 44Days: Rp 5.000\n- 90Days: Rp 13.000\n\n*Spotify Premium*\n- 30Days: Rp 4.000\n\n*CapCut Pro*\n- 30Days: Rp 2.800\n\nOrder Otomatis:\nWA: wa.me/6285143237650?text=%23stok\nTG: t.me/brstore_orderbot",
+        "times": ["00:00", "03:00", "06:00", "07:30", "09:00", "10:30", "12:00", "13:30", "15:00", "16:30", "18:00", "19:30", "21:00", "22:30"]
+      }
+    ]
+  },
+  "groupB": {
+    "jid": "120363045832731477@g.us",
+    "messages": [
+      {
+        "message": "*YouTube Premium*\n- 30Days: Rp 3.500\n- 44Days: Rp 5.000\n- 90Days: Rp 13.000\n\n*Spotify Premium*\n- 30Days: Rp 4.000\n\n*CapCut Pro*\n- 30Days: Rp 2.800\n\nOrder Otomatis:\nWA: wa.me/6285143237650?text=%23stok\nTG: t.me/brstore_orderbot",
+        "times": ["00:00", "03:00", "06:00", "08:00", "10:00", "12:00", "14:00", "16:00", "18:00", "20:00", "22:00"]
+      }
+    ]
+  },
+  "groupC": {
+    "jid": "120363319632103141@g.us",
+    "messages": [
+      {
+        "message": "*YouTube Premium*\n- 30Days: Rp 3.500\n- 44Days: Rp 5.000\n- 90Days: Rp 13.000\n\n*Spotify Premium*\n- 30Days: Rp 4.000\n\n*CapCut Pro*\n- 30Days: Rp 2.800\n\nOrder Otomatis:\nWA: wa.me/6285143237650?text=%23stok\nTG: t.me/brstore_orderbot",
+        "times": ["00:00", "03:00", "06:00", "08:00", "10:00", "12:00", "14:00", "16:00", "18:00", "20:00", "22:00"]
+      }
+    ]
+  },
+  "groupD": {
+    "jid": "120363027334943067@g.us",
+    "messages": [
+      {
+        "message": "*YouTube Premium*\n- 30Days: Rp 3.500\n- 44Days: Rp 5.000\n- 90Days: Rp 13.000\n\n*Spotify Premium*\n- 30Days: Rp 4.000\n\n*CapCut Pro*\n- 30Days: Rp 2.800\n\nOrder Otomatis:\nWA: wa.me/6285143237650?text=%23stok\nTG: t.me/brstore_orderbot",
+        "times": ["00:00", "03:00", "06:00", "08:00", "10:00", "12:00", "14:00", "16:00", "18:00", "20:00", "22:00"]
+      }
+    ]
+  },
+  "groupD": {
+    "jid": "120363409701649943@g.us",
+    "messages": [
+      {
+        "message": "*YouTube Premium*\n- 30Days: Rp 3.500\n- 44Days: Rp 5.000\n- 90Days: Rp 13.000\n\n*Spotify Premium*\n- 30Days: Rp 4.000\n\n*CapCut Pro*\n- 30Days: Rp 2.800\n\nOrder Otomatis:\nWA: wa.me/6285143237650?text=%23stok\nTG: t.me/brstore_orderbot",
+        "times": ["00:00", "03:00", "06:00", "07:30", "09:00", "10:30", "12:00", "13:30", "15:00", "16:30", "18:00", "19:30", "21:00", "22:30"]
+      }
+    ]
+  }
+}
