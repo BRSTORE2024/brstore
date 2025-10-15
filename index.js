@@ -103,6 +103,7 @@ const startSock = async () => {
 			}
 		} else if (connection === 'open') {
 			console.log(chalk.greenBright('Koneksi ke WhatsApp berhasil!'))
+			scheduleJob(sock)
 		}
 	})
 	
