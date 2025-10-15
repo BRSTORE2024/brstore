@@ -151,33 +151,58 @@ const startSock = async () => {
 
 		// ========== PERINTAH JADWAL ===========
 
-		// Tambah jadwal: !jadwal 20:00 -123456789@g.us Pesan
 		if (text.toLowerCase().startsWith('!jadwal')) {
 			const body = text.slice('!jadwal'.length).trim()
-			const match = body.match(/^(\d{1,2}:\d{2})\s+([-\d]+@g\.us|\d+)?\s*(.+)/)
+
+			// Coba cocokkan dengan target jid opsional
+			// Format contoh:
+			// "08:00,12:00,18:00 -123456789@g.us Pesan..."
+			// atau tanpa target jid: "08:00,12:00 Pesan..."
+			const match = body.match(/^([\d:,]+)\s+([-\d]+@g\.us|\d+)?\s*(.+)/) || body.match(/^([\d:,]+)\s+(.+)/)
 
 			if (!match) {
 				await sock.sendMessage(sender, {
-					text: '❌ Format salah. Gunakan:\n\n!jadwal 08:00 -123456789@g.us Pesan yang ingin dikirim\natau\n!jadwal 08:00 Pesan (untuk chat ini)'
+					text: '❌ Format salah. Contoh:\n\n!jadwal 08:00,12:00,18:00 -123456789@g.us Pesan\natau\n!jadwal 08:00,12:00 Pesan (chat ini)'
 				}, { quoted: msg })
 				return
 			}
 
-			const [, time, targetJid, messageText] = match
-			const jid = targetJid || sender
+			let times, jid, messageText
+
+			if (match.length === 4) {
+				times = match[1].split(',').map(t => t.trim())
+				jid = match[2] || sender
+				messageText = match[3]
+			} else {
+				times = match[1].split(',').map(t => t.trim())
+				jid = sender
+				messageText = match[2]
+			}
+
+			// Validasi jam
+			const validTime = times.every(t => /^\d{1,2}:\d{2}$/.test(t))
+			if (!validTime) {
+				await sock.sendMessage(sender, {
+					text: '❌ Format jam salah, gunakan HH:MM (24 jam). Contoh: 08:00,12:30'
+				}, { quoted: msg })
+				return
+			}
 
 			if (!schedule[jid]) schedule[jid] = []
-			schedule[jid].push({ time, message: messageText, lastSent: null })
+
+			times.forEach(time => {
+				schedule[jid].push({ time, message: messageText, lastSent: null })
+			})
+
 			saveSchedule()
 
 			await sock.sendMessage(sender, {
-				text: `✅ Jadwal ditambahkan:\nJam: ${time}\nTarget: ${jid}\nPesan: ${messageText}`
+				text: `✅ Jadwal ditambahkan untuk jam: ${times.join(', ')}\nTarget: ${jid}\nPesan: ${messageText}`
 			}, { quoted: msg })
 
 			return
 		}
 
-		// List jadwal: !listjadwal
 		if (text.toLowerCase() === '!listjadwal') {
 			const data = schedule[sender] || []
 			if (data.length === 0) {
@@ -195,7 +220,6 @@ const startSock = async () => {
 			return
 		}
 
-		// Hapus jadwal: !hapusjadwal 08:00
 		if (text.toLowerCase().startsWith('!hapusjadwal')) {
 			const time = text.slice('!hapusjadwal'.length).trim()
 
