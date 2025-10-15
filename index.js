@@ -10,7 +10,7 @@ const question = (text) => new Promise((resolve) => rl.question(text, resolve))
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
-const schedulePath = path.join(__dirname, 'schedule.json')
+const schedulePath = path.join(__dirname, 'schedule.json');;
 
 /**
  * Pastikan schedule.json ada
@@ -162,59 +162,6 @@ const startSock = async () => {
 			return
 		}
 	})
-	
-async function scheduleJob(sock) {
-  await ensureScheduleFile();
-
-  const lastSentTimes = new Set();
-
-  setInterval(async () => {
-    let data;
-    try {
-      const raw = await fs.readFile(schedulePath, 'utf-8');
-      data = JSON.parse(raw);
-    } catch (e) {
-      console.error('❌ Gagal membaca schedule.json:', e.message);
-      return;
-    }
-
-    const now = new Date();
-    const waktuSekarang = now.toTimeString().slice(0, 5); // "HH:MM"
-
-    // Ambil semua group secara dinamis
-    const groupKeys = Object.keys(data);
-
-    for (const groupKey of groupKeys) {
-      const group = data[groupKey];
-      if (!group || !group.jid || !Array.isArray(group.messages)) continue;
-
-      for (const item of group.messages) {
-        if (!Array.isArray(item.times)) continue;
-
-        // Filter waktu yang valid
-        const validTimes = item.times.filter(t => /^\d{2}:\d{2}$/.test(t));
-        if (!validTimes.includes(waktuSekarang)) continue;
-
-        const key = `${group.jid}-${item.message}-${waktuSekarang}`;
-        if (lastSentTimes.has(key)) continue;
-
-        try {
-          await sock.sendMessage(group.jid, { text: item.message }, {
-            forwardingScore: 999,
-            isForwarded: true
-          });
-          console.log(`✅ ${waktuSekarang} - Pesan ke ${groupKey}: "${item.message}"`);
-          lastSentTimes.add(key);
-
-          // reset agar bisa kirim lagi lain waktu
-          setTimeout(() => lastSentTimes.delete(key), 2 * 60 * 1000);
-        } catch (err) {
-          console.error(`❌ Gagal mengirim ke ${groupKey}: ${err.message}`);
-        }
-      }
-    }
-
-  }, 60 * 1000); // tiap menit
 }
 
 setTimeout(() => startSock(), 3000)
