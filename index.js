@@ -8,14 +8,27 @@ import { makeWASocket, DisconnectReason, useMultiFileAuthState, fetchLatestBaile
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
 const question = (text) => new Promise((resolve) => rl.question(text, resolve))
 
-const logger = pino({ level: 'silent' })
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+const schedulePath = path.join(__dirname, 'schedule.json')
 
-const JADWAL_FILE = 'jadwal.json'
-let schedule = fs.existsSync(JADWAL_FILE) ? JSON.parse(fs.readFileSync(JADWAL_FILE)) : {}
-
-function saveSchedule() {
-	fs.writeFileSync(JADWAL_FILE, JSON.stringify(schedule, null, 2))
+/**
+ * Pastikan schedule.json ada
+ */
+async function ensureScheduleFile() {
+  try {
+    await fs.access(schedulePath);
+  } catch {
+    const defaultData = {
+      groupA: { jid: '', messages: [] },
+      groupB: { jid: '', messages: [] }
+    };
+    await fs.writeFile(schedulePath, JSON.stringify(defaultData, null, 2));
+    console.log('📂 schedule.json dibuat otomatis');
+  }
 }
+
+const logger = pino({ level: 'silent' })
 
 let sock // global socket instance
 
@@ -148,159 +161,60 @@ const startSock = async () => {
 
 			return
 		}
-
-		// ========== PERINTAH JADWAL ===========
-
-		if (text.toLowerCase().startsWith('!jadwal')) {
-			const body = text.slice('!jadwal'.length).trim()
-
-			// Coba cocokkan dengan target jid opsional
-			// Format contoh:
-			// "08:00,12:00,18:00 -123456789@g.us Pesan..."
-			// atau tanpa target jid: "08:00,12:00 Pesan..."
-			const match = body.match(/^([\d:,]+)\s+([-\d]+@g\.us|\d+)?\s*(.+)/) || body.match(/^([\d:,]+)\s+(.+)/)
-
-			if (!match) {
-				await sock.sendMessage(sender, {
-					text: '❌ Format salah. Contoh:\n\n!jadwal 08:00,12:00,18:00 -123456789@g.us Pesan\natau\n!jadwal 08:00,12:00 Pesan (chat ini)'
-				}, { quoted: msg })
-				return
-			}
-
-			let times, jid, messageText
-
-			if (match.length === 4) {
-				times = match[1].split(',').map(t => t.trim())
-				jid = match[2] || sender
-				messageText = match[3]
-			} else {
-				times = match[1].split(',').map(t => t.trim())
-				jid = sender
-				messageText = match[2]
-			}
-
-			// Validasi jam
-			const validTime = times.every(t => /^\d{1,2}:\d{2}$/.test(t))
-			if (!validTime) {
-				await sock.sendMessage(sender, {
-					text: '❌ Format jam salah, gunakan HH:MM (24 jam). Contoh: 08:00,12:30'
-				}, { quoted: msg })
-				return
-			}
-
-			if (!schedule[jid]) schedule[jid] = []
-
-			times.forEach(time => {
-				schedule[jid].push({ time, message: messageText, lastSent: null })
-			})
-
-			saveSchedule()
-
-			await sock.sendMessage(sender, {
-				text: `✅ Jadwal ditambahkan untuk jam: ${times.join(', ')}\nTarget: ${jid}\nPesan: ${messageText}`
-			}, { quoted: msg })
-
-			return
-		}
-
-		if (text.toLowerCase() === '!listjadwal') {
-			const data = schedule[sender] || []
-			if (data.length === 0) {
-				await sock.sendMessage(sender, {
-					text: '📭 Kamu belum punya jadwal.'
-				}, { quoted: msg })
-				return
-			}
-
-			const result = data.map((item, i) => `${i + 1}. ⏰ ${item.time} - ${item.message}`).join('\n')
-
-			await sock.sendMessage(sender, {
-				text: `📋 Jadwal kamu:\n${result}`
-			}, { quoted: msg })
-			return
-		}
-
-		if (text.toLowerCase().startsWith('!hapusjadwal')) {
-			const time = text.slice('!hapusjadwal'.length).trim()
-
-			if (!/^\d{1,2}:\d{2}$/.test(time)) {
-				await sock.sendMessage(sender, {
-					text: '❌ Format salah. Contoh:\n!hapusjadwal 07:00'
-				}, { quoted: msg })
-				return
-			}
-
-			if (!schedule[sender]) {
-				await sock.sendMessage(sender, {
-					text: '⚠️ Tidak ada jadwal untuk dihapus.'
-				}, { quoted: msg })
-				return
-			}
-
-			const before = schedule[sender].length
-			schedule[sender] = schedule[sender].filter(j => j.time !== time)
-			const after = schedule[sender].length
-
-			if (before === after) {
-				await sock.sendMessage(sender, {
-					text: `⚠️ Tidak ditemukan jadwal di jam ${time}`
-				}, { quoted: msg })
-				return
-			}
-
-			saveSchedule()
-
-			await sock.sendMessage(sender, {
-				text: `✅ Jadwal pada jam ${time} telah dihapus.`
-			}, { quoted: msg })
-
-			return
-		}
 	})
+	
+async function scheduleJob(sock) {
+  await ensureScheduleFile();
 
-	// Fungsi bantu parse waktu flexible
-	function parseTime(t) {
-		const parts = t.split(':')
-		let hh = parts[0].padStart(2, '0')
-		let mm = parts[1] ? parts[1].padStart(2, '0') : '00'
+  const lastSentTimes = new Set();
 
-		const hNum = Number(hh)
-		const mNum = Number(mm)
+  setInterval(async () => {
+    let data;
+    try {
+      const raw = await fs.readFile(schedulePath, 'utf-8');
+      data = JSON.parse(raw);
+    } catch (e) {
+      console.error('❌ Gagal membaca schedule.json:', e.message);
+      return;
+    }
 
-		if (isNaN(hNum) || isNaN(mNum)) return null
-		if (hNum < 0 || hNum > 23) return null
-		if (mNum < 0 || mNum > 59) return null
+    const now = new Date();
+    const waktuSekarang = now.toTimeString().slice(0, 5); // "HH:MM"
 
-		return `${hh}:${mm}`
-	}
+    // Ambil semua group secara dinamis
+    const groupKeys = Object.keys(data);
 
-	// Scheduler cek setiap menit
-	setInterval(async () => {
-		if (!sock || !sock.user) return
+    for (const groupKey of groupKeys) {
+      const group = data[groupKey];
+      if (!group || !group.jid || !Array.isArray(group.messages)) continue;
 
-		const now = new Date()
-		// Ambil jam dan menit sekarang dengan format HH:MM
-		const currentTime = now.toTimeString().slice(0, 5) 
+      for (const item of group.messages) {
+        if (!Array.isArray(item.times)) continue;
 
-		for (const jid in schedule) {
-			for (const item of schedule[jid]) {
-			// Jika waktu sekarang sama dengan waktu jadwal
-				if (item.time === currentTime) {
-				// Cek supaya tidak kirim duplikat dalam menit yang sama
-					if (item.lastSent === currentTime) continue
+        // Filter waktu yang valid
+        const validTimes = item.times.filter(t => /^\d{2}:\d{2}$/.test(t));
+        if (!validTimes.includes(waktuSekarang)) continue;
 
-					try {
-						await sock.sendMessage(jid, { text: item.message })
-						item.lastSent = currentTime
-						saveSchedule()
-						console.log(`Pesan terkirim ke ${jid} pada ${currentTime}`)
-					} catch (e) {
-						console.error(`Gagal kirim pesan ke ${jid} pada ${currentTime}:`, e.message)
-					}
-				}
-			}
-		}
-	}, 60 * 1000) // cek tiap 60 detik (1 menit)
+        const key = `${group.jid}-${item.message}-${waktuSekarang}`;
+        if (lastSentTimes.has(key)) continue;
+
+        try {
+          await sock.sendMessage(group.jid, { text: item.message }, {
+            forwardingScore: 999,
+            isForwarded: true
+          });
+          console.log(`✅ ${waktuSekarang} - Pesan ke ${groupKey}: "${item.message}"`);
+          lastSentTimes.add(key);
+
+          // reset agar bisa kirim lagi lain waktu
+          setTimeout(() => lastSentTimes.delete(key), 2 * 60 * 1000);
+        } catch (err) {
+          console.error(`❌ Gagal mengirim ke ${groupKey}: ${err.message}`);
+        }
+      }
+    }
+
+  }, 60 * 1000); // tiap menit
 }
 
 setTimeout(() => startSock(), 3000)
