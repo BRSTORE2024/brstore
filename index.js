@@ -10,12 +10,21 @@ const question = (text) => new Promise((resolve) => rl.question(text, resolve))
 
 const logger = pino({ level: 'silent' })
 
+const JADWAL_FILE = 'jadwal.json'
+let schedule = fs.existsSync(JADWAL_FILE) ? JSON.parse(fs.readFileSync(JADWAL_FILE)) : {}
+
+function saveSchedule() {
+	fs.writeFileSync(JADWAL_FILE, JSON.stringify(schedule, null, 2))
+}
+
+let sock // global socket instance
+
 const startSock = async () => {
 	const { state, saveCreds } = await useMultiFileAuthState('session')
 	const { version } = await fetchLatestBaileysVersion()
 	console.log(`Using WA v${version.join('.')}`)
 
-	const sock = makeWASocket({
+	sock = makeWASocket({
 		version,
 		logger,
 		printQRInTerminal: false,
@@ -39,7 +48,7 @@ const startSock = async () => {
 			throw new Error(e)
 		}
 	}
-	
+
 	sock.ev.on('creds.update', saveCreds)
 	sock.ev.on('connection.update', (update) => {
 		const { connection, lastDisconnect } = update
@@ -81,7 +90,7 @@ const startSock = async () => {
 			console.log(chalk.greenBright('Koneksi ke WhatsApp berhasil!'))
 		}
 	})
-	
+
 	const pendingPwInput = new Map()
 
 	sock.ev.on('messages.upsert', async ({ messages, type }) => {
@@ -94,6 +103,7 @@ const startSock = async () => {
 
 		const prefix = '!sortpw'
 
+		// Fitur sortpw dari kamu sebelumnya
 		if (pendingPwInput.has(sender)) {
 			const emailList = pendingPwInput.get(sender)
 			const password = text.trim()
@@ -138,8 +148,115 @@ const startSock = async () => {
 
 			return
 		}
+
+		// ========== PERINTAH JADWAL ===========
+
+		// Tambah jadwal: !jadwal 20:00 -123456789@g.us Pesan
+		if (text.toLowerCase().startsWith('!jadwal')) {
+			const body = text.slice('!jadwal'.length).trim()
+			const match = body.match(/^(\d{1,2}:\d{2})\s+([-\d]+@g\.us|\d+)?\s*(.+)/)
+
+			if (!match) {
+				await sock.sendMessage(sender, {
+					text: '❌ Format salah. Gunakan:\n\n!jadwal 08:00 -123456789@g.us Pesan yang ingin dikirim\natau\n!jadwal 08:00 Pesan (untuk chat ini)'
+				}, { quoted: msg })
+				return
+			}
+
+			const [, time, targetJid, messageText] = match
+			const jid = targetJid || sender
+
+			if (!schedule[jid]) schedule[jid] = []
+			schedule[jid].push({ time, message: messageText, lastSent: null })
+			saveSchedule()
+
+			await sock.sendMessage(sender, {
+				text: `✅ Jadwal ditambahkan:\nJam: ${time}\nTarget: ${jid}\nPesan: ${messageText}`
+			}, { quoted: msg })
+
+			return
+		}
+
+		// List jadwal: !listjadwal
+		if (text.toLowerCase() === '!listjadwal') {
+			const data = schedule[sender] || []
+			if (data.length === 0) {
+				await sock.sendMessage(sender, {
+					text: '📭 Kamu belum punya jadwal.'
+				}, { quoted: msg })
+				return
+			}
+
+			const result = data.map((item, i) => `${i + 1}. ⏰ ${item.time} - ${item.message}`).join('\n')
+
+			await sock.sendMessage(sender, {
+				text: `📋 Jadwal kamu:\n${result}`
+			}, { quoted: msg })
+			return
+		}
+
+		// Hapus jadwal: !hapusjadwal 08:00
+		if (text.toLowerCase().startsWith('!hapusjadwal')) {
+			const time = text.slice('!hapusjadwal'.length).trim()
+
+			if (!/^\d{1,2}:\d{2}$/.test(time)) {
+				await sock.sendMessage(sender, {
+					text: '❌ Format salah. Contoh:\n!hapusjadwal 07:00'
+				}, { quoted: msg })
+				return
+			}
+
+			if (!schedule[sender]) {
+				await sock.sendMessage(sender, {
+					text: '⚠️ Tidak ada jadwal untuk dihapus.'
+				}, { quoted: msg })
+				return
+			}
+
+			const before = schedule[sender].length
+			schedule[sender] = schedule[sender].filter(j => j.time !== time)
+			const after = schedule[sender].length
+
+			if (before === after) {
+				await sock.sendMessage(sender, {
+					text: `⚠️ Tidak ditemukan jadwal di jam ${time}`
+				}, { quoted: msg })
+				return
+			}
+
+			saveSchedule()
+
+			await sock.sendMessage(sender, {
+				text: `✅ Jadwal pada jam ${time} telah dihapus.`
+			}, { quoted: msg })
+
+			return
+		}
 	})
-	
+
+	// Scheduler kirim pesan otomatis setiap menit
+	setInterval(async () => {
+		if (!sock || !sock.user) return
+
+		const now = new Date()
+		const currentTime = now.toTimeString().slice(0, 5)
+		const today = now.toISOString().split('T')[0]
+
+		for (const jid in schedule) {
+			for (const task of schedule[jid]) {
+				if (task.time === currentTime && task.lastSent !== today) {
+					try {
+						await sock.sendMessage(jid, { text: task.message })
+						task.lastSent = today
+						saveSchedule()
+						console.log(chalk.greenBright(`📤 Pesan terjadwal dikirim ke ${jid} pada ${task.time}`))
+					} catch (e) {
+						console.error(chalk.redBright(`Gagal kirim ke ${jid}: ${e.message}`))
+					}
+				}
+			}
+		}
+	}, 60 * 1000) // cek tiap menit
 }
 
 setTimeout(() => startSock(), 3000)
