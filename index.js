@@ -1,8 +1,10 @@
 import fs from 'fs'
 import pino from 'pino'
+import path from 'path'
 import chalk from 'chalk'
 import readline from 'readline'
 import { Boom } from '@hapi/boom'
+import { fileURLToPath } from 'url'
 import { makeWASocket, DisconnectReason, useMultiFileAuthState, fetchLatestBaileysVersion, makeCacheableSignalKeyStore } from '@whiskeysockets/baileys'
 
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
