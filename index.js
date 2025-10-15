@@ -105,6 +105,8 @@ const startSock = async () => {
 			console.log(chalk.greenBright('Koneksi ke WhatsApp berhasil!'))
 		}
 	})
+	
+	scheduleJob(sock)
 
 	const pendingPwInput = new Map()
 
