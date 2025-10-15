@@ -106,8 +106,6 @@ const startSock = async () => {
 			scheduleJob(sock)
 		}
 	})
-	
-	//scheduleJob()
 
 	const pendingPwInput = new Map()
 
@@ -168,8 +166,6 @@ const startSock = async () => {
 		}
 	})
 }
-
-scheduleJob(sock)
 
 async function scheduleJob(sock) {
     await ensureScheduleFile()
