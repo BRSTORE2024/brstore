@@ -82,31 +82,24 @@ const startSock = async () => {
 		}
 	})
 	
-	const pendingPwInput = new Map() // <sender, emailList[]>
+	const pendingPwInput = new Map()
 
 	sock.ev.on('messages.upsert', async ({ messages, type }) => {
 		if (type !== 'notify') return
 		const msg = messages[0]
-		console.log(msg)
 		if (!msg.message) return
 
 		const sender = msg.key.remoteJid
-		const text = (msg.message?.conversation ||
-			msg.message?.extendedTextMessage?.text ||
-			msg.message?.imageMessage?.caption || // dukung caption juga
-			'').trim()
+		const text = (msg.message?.conversation || msg.message?.extendedTextMessage?.text || msg.message?.imageMessage?.caption || '').trim()
 
 		const prefix = '!sortpw'
 
-		// ⏳ Cek apakah user sedang dalam sesi password
 		if (pendingPwInput.has(sender)) {
 			const emailList = pendingPwInput.get(sender)
 			const password = text.trim()
 
-			// Hapus sesi
 			pendingPwInput.delete(sender)
 
-			// Gabungkan email + pw
 			const result = emailList
 				.sort((a, b) => a.localeCompare(b))
 				.map((email) => `${email} | ${password}`)
@@ -119,11 +112,9 @@ const startSock = async () => {
 			return
 		}
 
-		// 🟡 Trigger awal: !sortpw + daftar email campur teks
 		if (text.toLowerCase().startsWith(prefix)) {
 			const body = text.slice(prefix.length).trim()
 
-			// Ekstrak semua @gmail.com dari teks
 			const extractEmails = (text) => {
 				const regex = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g
 				const found = text.match(regex) || []
@@ -139,7 +130,6 @@ const startSock = async () => {
 				return
 			}
 
-			// Simpan ke map dan minta password
 			pendingPwInput.set(sender, emailList)
 
 			await sock.sendMessage(sender, {
